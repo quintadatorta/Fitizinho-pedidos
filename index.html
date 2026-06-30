@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitizinho Lanches Naturais - Sistema de Pedidos</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        h2 {
+            color: #16a085;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"], input[type="datetime-local"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .val-total {
+            background-color: #e8f8f5;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #117a65;
+            margin-top: 10px;
+        }
+        button.btn-salvar {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+        button.btn-salvar:hover {
+            background-color: #219653;
+        }
+        button.btn-concluir {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button.btn-concluir:hover {
+            background-color: #2471a3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            color: #2c3e50;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        .sem-pedidos {
+            text-align: center;
+            color: #95a5a6;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Fitizinho Lanches Naturais</h1>
+    <p class="subtitle">Sistema de Registro de Pedidos (Preço Único: R$ 10,00)</p>
+
+    <h2>Registrar Novo Pedido</h2>
+    <form id="form-pedido">
+        <div class="form-group">
+            <label for="nome">Nome do Cliente:</label>
+            <input type="text" id="nome" required placeholder="Digite o nome do cliente">
+        </div>
+
+        <div class="form-group">
+            <label for="produto">Produto:</label>
+            <select id="produto" required>
+                <option value="Peito de Peru">Peito de Peru</option>
+                <option value="Presunto e Queijo">Presunto e Queijo</option>
+                <option value="Atum">Atum</option>
+                <option value="Frango Cremoso">Frango Cremoso</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="quantidade">Quantidade:</label>
+            <input type="number" id="quantidade" min="1" value="1" required oninput="calcularTotal()">
+        </div>
+
+        <div class="form-group">
+            <label for="dataEntrega">Data e Hora da Entrega:</label>
+            <input type="datetime-local" id="dataEntrega" required>
+        </div>
+
+        <div class="val-total">
+            Valor Total: R$ <span id="valor-total">10,00</span>
+        </div>
+
+        <button type="submit" class="btn-salvar">Salvar Encomenda</button>
+    </form>
+
+    <h2>Visão das Encomendas (Listadas por Data de Entrega)</h2>
+    <table id="tabela-encomendas">
+        <thead>
+            <tr>
+                <th>Data/Hora Entrega</th>
+                <th>Cliente</th>
+                <th>Produto</th>
+                <th>Qtd</th>
+                <th>Total</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody id="corpo-tabela">
+            </tbody>
+    </table>
+</div>
+
+<script>
+    const precoUnitario = 10;
+    let pedidos = JSON.parse(localStorage.getItem('pedidos_fitizinho')) || [];
+
+    // Carrega a tabela ao abrir a página
+    window.onload = function() {
+        atualizarTabela();
+    };
+
+    // Função simples para atualizar o valor total na tela enquanto muda a quantidade
+    function calcularTotal() {
+        const qtd = document.getElementById('quantidade').value;
+        const total = qtd * precoUnitario;
+        document.getElementById('valor-total').innerText = total.toFixed(2).replace('.', ',');
+    }
+
+    // Função para renderizar/atualizar a tabela na tela
+    function atualizarTabela() {
+        const tbody = document.getElementById('corpo-tabela');
+        tbody.innerHTML = '';
+
+        if (pedidos.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="sem-pedidos">Nenhum pedido pendente.</td></tr>`;
+            return;
+        }
+
+        // Ordena os pedidos por data de entrega (mais próximos primeiro)
+        pedidos.sort((a, b) => new Date(a.dataEntrega) - new Date(b.dataEntrega));
+
+        pedidos.forEach((pedido, index) => {
+            // Formata a data de entrega para exibição brasileira
+            const dataObjeto = new Date(pedido.dataEntrega);
+            const dataFormatada = dataObjeto.toLocaleDateString('pt-BR') + ' ' + dataObjeto.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+            
+            const totalFormatado = (pedido.quantidade * precoUnitario).toFixed(2).replace('.', ',');
+
+            const novaLinha = document.createElement('tr');
+            novaLinha.innerHTML = `
+                <td><strong>${dataFormatada}</strong></td>
+                <td>${pedido.nome}</td>
+                <td>${pedido.produto}</td>
+                <td>${pedido.quantidade}</td>
+                <td>R$ ${totalFormatado}</td>
+                <td><button class="btn-concluir" onclick="concluirPedido(${index})">Concluir</button></td>
+            `;
+            tbody.appendChild(novaLinha);
+        });
+    }
+
+    // Função para capturar o envio do formulário e salvar o pedido
+    document.getElementById('form-pedido').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const nome = document.getElementById('nome').value;
+        const produto = document.getElementById('produto').value;
+        const quantidade = parseInt(document.getElementById('quantidade').value);
+        const dataEntrega = document.getElementById('dataEntrega').value;
+
+        // Cria o objeto do novo pedido
+        const novoPedido = {
+            nome: nome,
+            produto: produto,
+            quantidade: quantidade,
+            dataEntrega: dataEntrega
+        };
+
+        // Adiciona na nossa lista e salva no LocalStorage
+        pedidos.push(novoPedido);
+        localStorage.setItem('pedidos_fitizinho', JSON.stringify(pedidos));
+
+        // Atualiza a tabela na tela
+        atualizarTabela();
+
+        // Limpa o formulário para o próximo pedido
+        document.getElementById('nome').value = '';
+        document.getElementById('quantidade').value = '1';
+        document.getElementById('dataEntrega').value = '';
+        calcularTotal();
+    });
+
+    // Função para o botão Concluir (Deleta o pedido da lista)
+    function concluirPedido(index) {
+        if(confirm("Deseja mesmo concluir este pedido? Ele será removido da lista.")) {
+            pedidos.splice(index, 1); // Remove o pedido do array
+            localStorage.setItem('pedidos_fitizinho', JSON.stringify(pedidos)); // Atualiza o LocalStorage
+            atualizarTabela(); // Atualiza a tela
+        }
+    }
+</script>
+
+</body>
+</html>
